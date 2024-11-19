@@ -1,6 +1,8 @@
 To-Do  ✍️
 A simple and elegant To-Do application built with HTML and CSS to help you organize and prioritize your tasks. This app is designed with a clean user interface, making task management effortless and visually appealing.
 
+LOGIN ID AND PASSWORD IS GIVEN BELOW
+
 Features 🚀
 Add Tasks: Easily add tasks to your to-do list.
 Mark Tasks as Complete: Check off tasks when they’re done.
@@ -13,7 +15,7 @@ CSS: To style the app with a modern and aesthetic design.
 
 We can Export the Summary of the file in GIST format.
 
-CREDENTIALS:
+*CREDENTIALS*:
 To use the To-Do login with
 *Username: admin
 *Password : admin123
