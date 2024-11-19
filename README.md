@@ -17,3 +17,5 @@ CREDENTIALS:
 To use the To-Do login with
 *Username: admin
 *Password : admin123
+
+To use it download the code and save it as HTML file and run the code.
