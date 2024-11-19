@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Project Manager</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .project-list {
+            margin-top: 20px;
+        }
+
+        .project-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+
+        .todo-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .export-summary {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+
+        .secondary-button {
+            background: #666;
+        }
+
+        .delete-button {
+            background: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Section -->
+    <div id="loginSection" class="login-container">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Main Application -->
+    <div id="appSection" class="container hidden">
+        <h1>Todo Project Manager</h1>
+        
+        <!-- Create New Project -->
+        <div>
+            <input type="text" id="newProjectInput" placeholder="New Project Title" />
+            <button onclick="createProject()">Create Project</button>
+        </div>
+
+        <!-- Project List -->
+        <div id="projectList" class="project-list"></div>
+
+        <!-- Project Detail View -->
+        <div id="projectDetail" class="hidden">
+            <h2 id="projectTitle"></h2>
+            <button onclick="editProjectTitle()">Edit Title</button>
+            <button onclick="showProjectList()" class="secondary-button">Back to Projects</button>
+            <button onclick="exportToGist()" class="secondary-button">Export to Gist</button>
+
+            <div>
+                <input type="text" id="newTodoInput" placeholder="New Todo" />
+                <button onclick="addTodo()">Add Todo</button>
+            </div>
+
+            <div id="todoList"></div>
+
+            <div id="exportSummary" class="export-summary hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data structure
+        let currentUser = null;
+        let currentProject = null;
+        
+        // Initialize data from localStorage
+        function initializeData() {
+            if (!localStorage.getItem('users')) {
+                localStorage.setItem('users', JSON.stringify([
+                    { username: 'admin', password: 'admin123' }
+                ]));
+            }
+            if (!localStorage.getItem('projects')) {
+                localStorage.setItem('projects', JSON.stringify([]));
+            }
+        }
+
+        // Authentication
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const users = JSON.parse(localStorage.getItem('users'));
+            
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                currentUser = username;
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('appSection').classList.remove('hidden');
+                loadProjects();
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        // Project Management
+        function createProject() {
+            const title = document.getElementById('newProjectInput').value;
+            if (!title) return;
+
+            const projects = JSON.parse(localStorage.getItem('projects'));
+            const newProject = {
+                id: Date.now().toString(),
+                title,
+                createdDate: new Date().toISOString(),
+                todos: []
+            };
+
+            projects.push(newProject);
+            localStorage.setItem('projects', JSON.stringify(projects));
+            document.getElementById('newProjectInput').value = '';
+            loadProjects();
+        }
+
+        function loadProjects() {
+            const projects = JSON.parse(localStorage.getItem('projects'));
+            const projectList = document.getElementById('projectList');
+            projectList.innerHTML = '';
+
+            projects.forEach(project => {
+                const projectElement = document.createElement('div');
+                projectElement.className = 'project-item';
+                projectElement.innerHTML = `
+                    <span>${project.title}</span>
+                    <div>
+                        <button onclick="viewProject('${project.id}')">View</button>
+                        <button onclick="deleteProject('${project.id}')" class="delete-button">Delete</button>
+                    </div>
+                `;
+                projectList.appendChild(projectElement);
+            });
+        }
+
+        function viewProject(projectId) {
+            const projects = JSON.parse(localStorage.getItem('projects'));
+            currentProject = projects.find(p => p.id === projectId);
+            
+            document.getElementById('projectList').classList.add('hidden');
+            document.getElementById('projectDetail').classList.remove('hidden');
+            document.getElementById('projectTitle').textContent = currentProject.title;
+            
+            loadTodos();
+        }
+
+        function editProjectTitle() {
+            const newTitle = prompt('Enter new project title:', currentProject.title);
+            if (newTitle) {
+                const projects = JSON.parse(localStorage.getItem('projects'));
+                const project = projects.find(p => p.id === currentProject.id);
+                project.title = newTitle;
+                localStorage.setItem('projects', JSON.stringify(projects));
+                currentProject.title = newTitle;
+                document.getElementById('projectTitle').textContent = newTitle;
+            }
+        }
+
+        function showProjectList() {
+            document.getElementById('projectDetail').classList.add('hidden');
+            document.getElementById('projectList').classList.remove('hidden');
+            document.getElementById('exportSummary').classList.add('hidden');
+        }
+
+        function deleteProject(projectId) {
+            if (confirm('Are you sure you want to delete this project?')) {
+                const projects = JSON.parse(localStorage.getItem('projects'));
+                const updatedProjects = projects.filter(p => p.id !== projectId);
+                localStorage.setItem('projects', JSON.stringify(updatedProjects));
+                loadProjects();
+            }
+        }
+
+        // Todo Management
+        function addTodo() {
+            const description = document.getElementById('newTodoInput').value;
+            if (!description) return;
+
+            const projects = JSON.parse(localStorage.getItem('projects'));
+            const project = projects.find(p => p.id === currentProject.id);
+            
+            project.todos.push({
+                id: Date.now().toString(),
+                description,
+                completed: false,
+                createdDate: new Date().toISOString(),
+                updatedDate: new Date().toISOString()
+            });
+
+            localStorage.setItem('projects', JSON.stringify(projects));
+            document.getElementById('newTodoInput').value = '';
+            loadTodos();
+        }
+
+        function loadTodos() {
+            const todoList = document.getElementById('todoList');
+            todoList.innerHTML = '';
+
+            currentProject.todos.forEach(todo => {
+                const todoElement = document.createElement('div');
+                todoElement.className = 'todo-item';
+                todoElement.innerHTML = `
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} 
+                           onchange="toggleTodo('${todo.id}')"/>
+                    <span>${todo.description}</span>
+                    <button onclick="editTodo('${todo.id}')" class="secondary-button">Edit</button>
+                    <button onclick="deleteTodo('${todo.id}')" class="delete-button">Delete</button>
+                `;
+                todoList.appendChild(todoElement);
+            });
+        }
+
+        function toggleTodo(todoId) {
+            const projects = JSON.parse(localStorage.getItem('projects'));
+            const project = projects.find(p => p.id === currentProject.id);
+            const todo = project.todos.find(t => t.id === todoId);
+            todo.completed = !todo.completed;
+            todo.updatedDate = new Date().toISOString();
+            
+            localStorage.setItem('projects', JSON.stringify(projects));
+            currentProject = project;
+        }
+
+        function editTodo(todoId) {
+            const projects = JSON.parse(localStorage.getItem('projects'));
+            const project = projects.find(p => p.id === currentProject.id);
+            const todo = project.todos.find(t => t.id === todoId);
+            
+            const newDescription = prompt('Edit todo:', todo.description);
+            if (newDescription) {
+                todo.description = newDescription;
+                todo.updatedDate = new Date().toISOString();
+                localStorage.setItem('projects', JSON.stringify(projects));
+                currentProject = project;
+                loadTodos();
+            }
+        }
+
+        function deleteTodo(todoId) {
+            if (confirm('Are you sure you want to delete this todo?')) {
+                const projects = JSON.parse(localStorage.getItem('projects'));
+                const project = projects.find(p => p.id === currentProject.id);
+                project.todos = project.todos.filter(t => t.id !== todoId);
+                
+                localStorage.setItem('projects', JSON.stringify(projects));
+                currentProject = project;
+                loadTodos();
+            }
+        }
+
+        // Export functionality
+        function exportToGist() {
+            const completedTodos = currentProject.todos.filter(t => t.completed);
+            const pendingTodos = currentProject.todos.filter(t => !t.completed);
+            
+            const markdown = `# ${currentProject.title}
+
+Summary: ${completedTodos.length} / ${currentProject.todos.length} completed
+
+## Pending Tasks
+${pendingTodos.map(todo => `- [ ] ${todo.description}`).join('\n')}
+
+## Completed Tasks
+${completedTodos.map(todo => `- [x] ${todo.description}`).join('\n')}`;
+
+            // Since we can't actually create a GitHub gist, we'll show the markdown
+            const exportSummary = document.getElementById('exportSummary');
+            exportSummary.classList.remove('hidden');
+            exportSummary.innerHTML = `<h3>Generated Markdown:</h3><pre>${markdown}</pre>`;
+            
+            // Download as .md file
+            const blob = new Blob([markdown], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentProject.title}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize the application
+        initializeData();
+    </script>
